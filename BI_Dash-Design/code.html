@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BEEFMAPS INTEL | Strategic Command</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#4edea3",
+                        "background": "#131313",
+                        "primary-fixed-dim": "#ffb2ba",
+                        "on-secondary": "#472a00",
+                        "outline-variant": "#594143",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed": "#002113",
+                        "primary-fixed": "#ffd9dc",
+                        "on-secondary-container": "#5b3800",
+                        "on-tertiary-container": "#4bdca0",
+                        "surface-dim": "#131313",
+                        "secondary": "#ffb95f",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-error": "#690005",
+                        "inverse-on-surface": "#313030",
+                        "surface": "#131313",
+                        "on-primary-fixed": "#400010",
+                        "on-primary-container": "#ffadb6",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-fixed": "#2a1700",
+                        "on-background": "#e5e2e1",
+                        "surface-container": "#201f1f",
+                        "tertiary-container": "#005d3e",
+                        "secondary-fixed-dim": "#ffb95f",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#6ffbbe",
+                        "outline": "#a8898c",
+                        "inverse-surface": "#e5e2e1",
+                        "on-primary": "#670020",
+                        "primary": "#ffb2ba",
+                        "surface-tint": "#ffb2ba",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "secondary-fixed": "#ffddb8",
+                        "on-surface": "#e5e2e1",
+                        "inverse-primary": "#b32446",
+                        "surface-bright": "#3a3939",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-tertiary": "#003824",
+                        "on-secondary-fixed-variant": "#653e00",
+                        "surface-container-low": "#1c1b1b",
+                        "on-surface-variant": "#e0bec1",
+                        "surface-container-highest": "#353534",
+                        "surface-variant": "#353534",
+                        "secondary-container": "#ee9800",
+                        "surface-container-high": "#2a2a2a",
+                        "primary-container": "#9f1239",
+                        "on-primary-fixed-variant": "#910130"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk"],
+                        "display": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(32, 31, 31, 0.6);
+            backdrop-filter: blur(20px);
+            box-shadow: inset 1.5px 1.5px 0px 0px rgba(168, 137, 140, 0.1);
+        }
+        .map-glow {
+            filter: drop-shadow(0 0 8px rgba(238, 152, 0, 0.6));
+        }
+        body {
+            background-color: #131313;
+            color: #e5e2e1;
+            overflow: hidden;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #594143; border-radius: 10px; }
+    </style>
+</head>
+<body class="font-body selection:bg-primary-container selection:text-white">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 h-20 bg-[#131313]/60 backdrop-blur-[20px] shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] after:absolute after:bottom-0 after:left-0 after:h-[1px] after:w-full after:bg-gradient-to-r after:from-transparent after:via-white/10 after:to-transparent">
+<div class="flex justify-between items-center px-12 w-full max-w-[1920px] mx-auto h-full">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black text-white tracking-tighter font-headline uppercase">BEEFMAPS INTEL</span>
+<div class="hidden md:flex gap-8 items-center h-full pt-1">
+<a class="text-rose-700 border-b-2 border-rose-900 pb-1 font-headline tracking-tighter uppercase font-bold text-sm transition-all duration-300" href="#">Intel Feed</a>
+<a class="text-neutral-400 font-medium hover:text-amber-500 transition-all duration-300 font-headline tracking-tighter uppercase text-sm" href="#">Alerts</a>
+<a class="text-neutral-400 font-medium hover:text-amber-500 transition-all duration-300 font-headline tracking-tighter uppercase text-sm" href="#">Trade</a>
+<a class="text-neutral-400 font-medium hover:text-amber-500 transition-all duration-300 font-headline tracking-tighter uppercase text-sm" href="#">AI Analyst</a>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative flex items-center bg-surface-container-lowest px-4 py-2 rounded-lg outline outline-1 outline-white/5">
+<span class="material-symbols-outlined text-neutral-500 text-sm mr-2">search</span>
+<input class="bg-transparent border-none text-xs focus:ring-0 text-white w-48 font-headline tracking-widest uppercase" placeholder="QUERY ASSETS..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant hover:text-secondary transition-colors cursor-pointer" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:text-secondary transition-colors cursor-pointer" data-icon="settings">settings</span>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-primary/30">
+<img alt="Chief Intelligence Officer" data-alt="close-up portrait of a high-ranking intelligence officer in a dark suit against a dramatic low-key lit architectural background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNEGRWRvNSS9poPBVbSRVTnsB86yk0Cq6uMe6Au6ujiYvJHHXMs2025TtXmakRri2Czq-p01lb3XJ41ondCvwKyIcZYljusQNk5GFetR3oSi9F79jKPaJAuW-S7C4a9dXB4iMJtWudr_0zkgX8l6_SxO6X17QYrA8UvMffDu2alrowk6ce8hZNR1qCNdQspb_9EuYNlBc7KsXpsTMDvHoLjgegzjHOTBF4IvZSYpP14HyA-6criPt9xn2i6S0lFaUWmXu4vjUbkGI"/>
+</div>
+</div>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-72 z-40 bg-[#201f1f]/80 backdrop-blur-[30px] border-r border-white/5 flex flex-col py-8 shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
+<div class="px-8 mt-20 mb-10">
+<h2 class="text-white font-bold font-headline text-xs tracking-[0.2em] mb-1">STRATEGIC LAYERS</h2>
+<p class="text-primary font-bold text-[10px] tracking-widest opacity-60">V3.0 COMMAND</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-neutral-500 px-6 py-4 flex items-center gap-4 hover:bg-white/5 transition-all duration-300 group" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="water_drop">water_drop</span>
+<span class="font-headline text-xs uppercase tracking-widest group-hover:text-rose-100">Drought</span>
+</a>
+<a class="bg-rose-900/20 text-white border-l-4 border-rose-900 px-6 py-4 flex items-center gap-4" href="#">
+<span class="material-symbols-outlined text-lg text-amber-500" data-icon="local_fire_department">local_fire_department</span>
+<span class="font-headline text-xs uppercase tracking-widest">Fire</span>
+</a>
+<a class="text-neutral-500 px-6 py-4 flex items-center gap-4 hover:bg-white/5 transition-all duration-300 group" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="warehouse">warehouse</span>
+<span class="font-headline text-xs uppercase tracking-widest group-hover:text-rose-100">Feedlots</span>
+</a>
+<a class="text-neutral-500 px-6 py-4 flex items-center gap-4 hover:bg-white/5 transition-all duration-300 group" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="monitoring">monitoring</span>
+<span class="font-headline text-xs uppercase tracking-widest group-hover:text-rose-100">Trade</span>
+</a>
+</nav>
+<div class="px-6 mb-24">
+<button class="w-full py-4 bg-gradient-to-r from-secondary-container to-secondary text-on-secondary font-headline font-bold text-xs tracking-widest rounded-sm hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(238,152,0,0.2)]">
+                DEPLOY ANALYSIS
+            </button>
+</div>
+<div class="px-6 space-y-4">
+<div class="flex items-center gap-4 text-neutral-500 cursor-pointer hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="help">help</span>
+<span class="font-headline text-[10px] uppercase tracking-widest">Support</span>
+</div>
+<div class="flex items-center gap-4 text-neutral-500 cursor-pointer hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm text-tertiary" data-icon="sensors">sensors</span>
+<span class="font-headline text-[10px] uppercase tracking-widest">System Status</span>
+</div>
+</div>
+</aside>
+<!-- Main Command Canvas -->
+<main class="ml-72 mr-80 pt-20 h-screen relative bg-surface-container-lowest overflow-hidden">
+<!-- Interactive Map Container -->
+<div class="absolute inset-0 z-0">
+<div class="w-full h-full relative" data-location="The Americas" style="">
+<img alt="Global Beef Intelligence Map" class="w-full h-full object-cover opacity-40 grayscale contrast-125" data-alt="ultra-detailed dark topographic satellite map of the Americas with glowing amber and red data points and neon trade lines" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQnhWaFJnI_vdg8aMPIODQpGjTwpwAXbeJnMwa6iRybEgLUjCUxqpxDYqPUO7D20o3cRoAPvs3CEIwXmzHJ4lr7gqpMhgYxTDrcl3QyWDBZQiG5FM8GbUoPTiwz5Ni-2sGlQCpZ-gPKUs_7JtmR7BHFtLmXbyHmKQt--vISR-PlxGxBNtc_sRjSM-lYaugEnYbNEuabAVHTh0Deu3gd7c-rrbxkWoDxCPfoQ3pNGlUyXPOW20haphyZB-qmL8lCPI8XJ9gYTRinco"/>
+<!-- Glowing Map Overlay -->
+<div class="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background/80"></div>
+<!-- Strategic Pins -->
+<!-- Texas/Mexico Outbreak -->
+<div class="absolute top-1/2 left-1/3 group cursor-pointer">
+<div class="relative">
+<div class="absolute inset-0 bg-primary animate-ping rounded-full opacity-75"></div>
+<div class="relative bg-primary p-2 rounded-full border-2 border-white/20 shadow-[0_0_15px_#9f1239] map-glow">
+<span class="material-symbols-outlined text-white text-xs" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+</div>
+<div class="absolute top-12 left-0 glass-panel p-3 min-w-[180px] rounded border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+<p class="font-headline text-[10px] text-primary font-bold tracking-tighter mb-1 uppercase">Alert Level 4</p>
+<p class="font-headline text-sm font-bold text-white mb-2 uppercase">TX/MEX CLUSTER</p>
+<div class="flex justify-between text-[9px] text-neutral-400 font-medium">
+<span>SENSORS ACTIVE</span>
+<span class="text-tertiary">STABLE</span>
+</div>
+</div>
+</div>
+<!-- Midwest Feedlots -->
+<div class="absolute top-1/3 left-1/3 translate-x-12 translate-y-4 group cursor-pointer">
+<div class="bg-secondary p-1.5 rounded-full border-2 border-white/10 shadow-[0_0_10px_#ee9800] map-glow">
+<span class="material-symbols-outlined text-on-secondary text-xs" style="font-variation-settings: 'FILL' 1;">warehouse</span>
+</div>
+</div>
+<!-- South American Trade Flow -->
+<div class="absolute bottom-1/4 left-1/2 group cursor-pointer">
+<div class="bg-tertiary p-1.5 rounded-full border-2 border-white/10 shadow-[0_0_10px_#4edea3] map-glow">
+<span class="material-symbols-outlined text-on-tertiary text-xs" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Dashboard Overlays (Glassmorphic) -->
+<div class="relative z-10 p-10 flex flex-col h-full justify-between pointer-events-none">
+<div class="flex justify-between items-start w-full">
+<div class="glass-panel p-6 rounded-xl border border-white/5 pointer-events-auto w-72">
+<h3 class="font-headline text-[10px] text-secondary font-bold tracking-[0.2em] mb-4 uppercase">SYSTEM LOG</h3>
+<div class="space-y-3">
+<div class="flex gap-3">
+<span class="text-tertiary font-mono text-[9px]">14:22</span>
+<p class="text-[11px] text-neutral-300 font-medium leading-tight">Brazil export quota increased by 12% for Q3.</p>
+</div>
+<div class="flex gap-3 border-t border-white/5 pt-3">
+<span class="text-primary font-mono text-[9px]">13:05</span>
+<p class="text-[11px] text-neutral-300 font-medium leading-tight">Heat stress advisory issued for Nebraska corridors.</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-4 pointer-events-auto">
+<div class="glass-panel px-4 py-2 rounded flex items-center gap-4">
+<span class="text-[10px] font-headline tracking-widest text-neutral-400">LAT: 31.9686° N</span>
+<span class="text-[10px] font-headline tracking-widest text-neutral-400">LON: 99.9018° W</span>
+</div>
+<div class="glass-panel p-2 rounded-lg flex flex-col gap-2">
+<button class="p-2 hover:bg-white/10 rounded transition-colors text-white">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="p-2 hover:bg-white/10 rounded transition-colors text-white">
+<span class="material-symbols-outlined">remove</span>
+</button>
+</div>
+</div>
+</div>
+<div class="w-full flex justify-center pb-20">
+<div class="glass-panel px-8 py-4 rounded-full flex items-center gap-12 border border-primary/20 pointer-events-auto">
+<div class="flex flex-col items-center">
+<span class="text-[10px] font-headline tracking-widest text-neutral-500 uppercase">Live Supply</span>
+<span class="text-xl font-headline font-bold text-white tracking-tighter">1.28M</span>
+</div>
+<div class="h-8 w-px bg-white/10"></div>
+<div class="flex flex-col items-center">
+<span class="text-[10px] font-headline tracking-widest text-neutral-500 uppercase">Export Flow</span>
+<span class="text-xl font-headline font-bold text-tertiary tracking-tighter">+4.2%</span>
+</div>
+<div class="h-8 w-px bg-white/10"></div>
+<div class="flex flex-col items-center">
+<span class="text-[10px] font-headline tracking-widest text-neutral-500 uppercase">Risk Factor</span>
+<span class="text-xl font-headline font-bold text-primary tracking-tighter">MID</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Right Sidebar (Intel Feed) -->
+<aside class="fixed right-0 top-0 h-screen w-80 z-30 bg-[#1c1b1b] pt-28 pb-32 px-6 overflow-y-auto">
+<div class="flex items-center justify-between mb-8 border-b border-white/5 pb-4">
+<h2 class="text-white font-headline text-xs font-bold tracking-[0.2em] uppercase">Intel Feed</h2>
+<span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div class="space-y-6">
+<!-- Feed Item -->
+<div class="group relative bg-surface-container-low p-5 rounded-xl border border-white/5 hover:border-primary/40 transition-all duration-500 cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<span class="bg-primary/10 text-primary text-[9px] font-bold px-2 py-0.5 rounded tracking-tighter uppercase">Urgent</span>
+<span class="text-[10px] font-mono text-neutral-500">2M AGO</span>
+</div>
+<h4 class="text-sm font-headline font-bold text-white mb-2 leading-snug group-hover:text-primary transition-colors uppercase">USDA FEED REPORTS: Q3 OUTLOOK</h4>
+<p class="text-[11px] text-neutral-400 font-medium leading-relaxed mb-4">Significant contraction in herd sizes reported across the Panhandle. Supply constraints imminent.</p>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-surface-container-lowest rounded text-[9px] text-neutral-500 uppercase tracking-widest">SENSORY</span>
+<span class="px-2 py-1 bg-surface-container-lowest rounded text-[9px] text-neutral-500 uppercase tracking-widest">DOMESTIC</span>
+</div>
+<div class="absolute inset-0 rounded-xl bg-gradient-to-tr from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<div class="group relative bg-surface-container-low p-5 rounded-xl border border-white/5 hover:border-secondary/40 transition-all duration-500 cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<span class="bg-secondary/10 text-secondary text-[9px] font-bold px-2 py-0.5 rounded tracking-tighter uppercase">Trade Flow</span>
+<span class="text-[10px] font-mono text-neutral-500">14M AGO</span>
+</div>
+<h4 class="text-sm font-headline font-bold text-white mb-2 leading-snug group-hover:text-secondary transition-colors uppercase">CHINA IMPORT ADJUSTMENT</h4>
+<p class="text-[11px] text-neutral-400 font-medium leading-relaxed mb-4">Customs policy shift at Shanghai terminal affecting premium frozen cuts.</p>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-surface-container-lowest rounded text-[9px] text-neutral-500 uppercase tracking-widest">LOGISTICS</span>
+</div>
+</div>
+<div class="group relative bg-surface-container-low p-5 rounded-xl border border-white/5 hover:border-tertiary/40 transition-all duration-500 cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<span class="bg-tertiary/10 text-tertiary text-[9px] font-bold px-2 py-0.5 rounded tracking-tighter uppercase">Climate</span>
+<span class="text-[10px] font-mono text-neutral-500">42M AGO</span>
+</div>
+<h4 class="text-sm font-headline font-bold text-white mb-2 leading-snug group-hover:text-tertiary transition-colors uppercase">WILDFIRE ALERTS: S. DAKOTA</h4>
+<p class="text-[11px] text-neutral-400 font-medium leading-relaxed mb-4">Containment at 12%. Grazing lands in priority zone B-4 compromised.</p>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-surface-container-lowest rounded text-[9px] text-neutral-500 uppercase tracking-widest">SEVERE</span>
+</div>
+</div>
+<div class="group relative bg-surface-container-low p-5 rounded-xl border border-white/5 hover:border-primary/40 transition-all duration-500 cursor-pointer opacity-80">
+<div class="flex justify-between items-start mb-3">
+<span class="bg-neutral-800 text-neutral-400 text-[9px] font-bold px-2 py-0.5 rounded tracking-tighter uppercase">Analysis</span>
+<span class="text-[10px] font-mono text-neutral-500">1H AGO</span>
+</div>
+<h4 class="text-sm font-headline font-bold text-white mb-2 leading-snug uppercase">RETAIL MARGIN COMPRESSION</h4>
+<p class="text-[11px] text-neutral-400 font-medium leading-relaxed mb-4">Wholesale price indices showing divergence from retail shelf benchmarks.</p>
+</div>
+</div>
+</aside>
+<!-- Bottom Ticker -->
+<div class="fixed bottom-0 left-0 w-full h-12 bg-surface-container-lowest border-t border-white/5 z-50 flex items-center overflow-hidden">
+<div class="bg-primary-container h-full flex items-center px-6 gap-3 z-10 shadow-[4px_0_10px_rgba(0,0,0,0.5)]">
+<span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+<span class="text-white font-headline text-[10px] font-bold tracking-widest uppercase whitespace-nowrap">MARKET LIVE</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<div class="flex gap-16 animate-marquee whitespace-nowrap h-full items-center pl-12">
+<div class="flex items-center gap-2">
+<span class="text-neutral-500 font-headline text-[10px] tracking-widest uppercase">LIVE CATTLE - APR CME:</span>
+<span class="text-white font-mono text-xs font-bold">$184.10</span>
+<span class="text-tertiary font-mono text-[10px] font-bold">(+0.85)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-neutral-500 font-headline text-[10px] tracking-widest uppercase">CHOICE CUTOUT:</span>
+<span class="text-white font-mono text-xs font-bold">$317.84</span>
+<span class="text-tertiary font-mono text-[10px] font-bold">(+2.14)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-neutral-500 font-headline text-[10px] tracking-widest uppercase">US BEEF EXPORTS:</span>
+<span class="text-white font-mono text-xs font-bold">$8.34B</span>
+<span class="text-primary font-mono text-[10px] font-bold">(-0.12)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-neutral-500 font-headline text-[10px] tracking-widest uppercase">FEEDER INDEX:</span>
+<span class="text-white font-mono text-xs font-bold">$246.55</span>
+<span class="text-tertiary font-mono text-[10px] font-bold">(+1.20)</span>
+</div>
+<!-- Duplicate for loop -->
+<div class="flex items-center gap-2">
+<span class="text-neutral-500 font-headline text-[10px] tracking-widest uppercase">LIVE CATTLE - APR CME:</span>
+<span class="text-white font-mono text-xs font-bold">$184.10</span>
+<span class="text-tertiary font-mono text-[10px] font-bold">(+0.85)</span>
+</div>
+</div>
+</div>
+</div>
+<style>
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+            display: flex;
+            width: fit-content;
+            animation: marquee 30s linear infinite;
+        }
+        .animate-marquee:hover {
+            animation-play-state: paused;
+        }
+    </style>
+</body></html>

@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="description" content="BeefDeck — Global beef industry intelligence. Cattle prices, USDA data, trade flows, disease alerts, drought monitoring."/>
+  <meta name="theme-color" content="#0d0b08"/>
+  <!-- Open Graph -->
+  <meta property="og:title" content="BeefDeck Intelligence"/>
+  <meta property="og:description" content="Global beef industry intelligence dashboard. CME futures, USDA reports, trade flows, disease alerts."/>
+  <meta property="og:type" content="website"/>
+  <title>BeefDeck Intelligence</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Playfair+Display:wght@700;900&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0b08;
+      --surface: #141209;
+      --border: #2a2418;
+      --border-bright: #3d3326;
+      --amber: #c8882a;
+      --amber-dim: #7a5218;
+      --bone: #e8e0d0;
+      --bone-dim: #8a8070;
+      --red: #c0392b;
+      --green: #4a8c3f;
+      --green-bright: #6ab860;
+      --blue: #2a6080;
+      --yellow: #d4a017;
+      --purple: #9b59b6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--bone); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; }
+    #root { height: 100%; }
+
+    @keyframes fadeUp    { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+    @keyframes scanline  { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
+    @keyframes scroll-ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+    @keyframes slide-in  { from{transform:translateX(-100%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+    /* ── SCANLINE ── */
+    .scanline { position:fixed; top:0; left:0; right:0; height:2px; background:linear-gradient(transparent,rgba(200,136,42,0.05),transparent); pointer-events:none; z-index:9999; animation:scanline 9s linear infinite; }
+
+    /* ── DESKTOP LAYOUT ── */
+    .dashboard { display:grid; grid-template-rows:48px 1fr; height:100vh; overflow:hidden; }
+
+    .header { background:var(--surface); border-bottom:1px solid var(--border-bright); display:flex; align-items:center; padding:0 16px; gap:16px; flex-shrink:0; animation:fadeUp 0.4s ease both; z-index:100; position:relative; }
+    .header-logo { font-family:'Playfair Display',serif; font-weight:900; font-size:18px; color:var(--amber); letter-spacing:-0.5px; white-space:nowrap; flex-shrink:0; }
+    .header-logo span { color:var(--bone-dim); font-weight:400; font-size:10px; font-family:'IBM Plex Mono',monospace; margin-left:8px; letter-spacing:2px; text-transform:uppercase; }
+    .header-divider { width:1px; height:22px; background:var(--border-bright); flex-shrink:0; }
+    .live-badge { display:flex; align-items:center; gap:5px; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--green-bright); text-transform:uppercase; white-space:nowrap; flex-shrink:0; }
+    .live-dot { width:6px; height:6px; border-radius:50%; background:var(--green-bright); animation:pulse-dot 1.5s ease-in-out infinite; flex-shrink:0; }
+    .header-clock { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--bone-dim); white-space:nowrap; flex-shrink:0; }
+    .header-stats { display:flex; gap:16px; margin-left:auto; }
+    .header-stat { display:flex; flex-direction:column; align-items:flex-end; }
+    .header-stat-label { font-family:'IBM Plex Mono',monospace; font-size:8px; color:var(--bone-dim); letter-spacing:1.5px; text-transform:uppercase; }
+    .header-stat-value { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; }
+    .val-up   { color:var(--green-bright); }
+    .val-down { color:var(--red); }
+    .val-red  { color:var(--red); }
+
+    /* hamburger — desktop hidden */
+    .hamburger { display:none; flex-direction:column; gap:4px; cursor:pointer; padding:4px; flex-shrink:0; }
+    .hamburger span { display:block; width:20px; height:2px; background:var(--bone-dim); border-radius:1px; transition:all 0.2s; }
+
+    .main { display:grid; grid-template-columns:210px 1fr 275px; overflow:hidden; height:100%; position:relative; }
+
+    /* ── SIDEBAR ── */
+    .sidebar { background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; animation:fadeUp 0.4s ease 0.1s both; }
+    .sidebar::-webkit-scrollbar { width:3px; }
+    .sidebar::-webkit-scrollbar-thumb { background:var(--border-bright); }
+    .sidebar-section { padding:12px 14px; border-bottom:1px solid var(--border); }
+    .sidebar-section-label { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--amber-dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
+    .layer-toggle { display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:3px; cursor:pointer; transition:background 0.15s; margin-bottom:2px; user-select:none; }
+    .layer-toggle:hover  { background:rgba(200,136,42,0.06); }
+    .layer-toggle.active { background:rgba(200,136,42,0.10); }
+    .toggle-dot { width:8px; height:8px; border-radius:50%; border:1.5px solid var(--border-bright); flex-shrink:0; transition:all 0.2s; }
+    .toggle-label { font-size:11px; color:var(--bone-dim); transition:color 0.2s; }
+    .layer-toggle.active .toggle-label { color:var(--bone); }
+    .sidebar-alert-mini { margin-bottom:7px; padding:6px 8px; background:rgba(192,57,43,0.07); border-radius:3px; }
+
+    /* ── CENTER ── */
+    .center { display:grid; grid-template-rows:1fr 195px; overflow:hidden; }
+    .map-area { position:relative; background:var(--bg); overflow:hidden; }
+    .map-container { position:absolute; inset:0; bottom:36px; }
+    .map-svg { width:100%; height:100%; }
+    .map-overlay-label { position:absolute; top:10px; left:12px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--amber-dim); letter-spacing:2px; text-transform:uppercase; pointer-events:none; }
+    .map-legend { position:absolute; bottom:44px; left:12px; display:flex; flex-direction:column; gap:3px; pointer-events:none; }
+    .legend-item { display:flex; align-items:center; gap:5px; font-family:'IBM Plex Mono',monospace; font-size:8px; color:var(--bone-dim); }
+    .legend-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+    /* ticker */
+    .ticker-bar { background:var(--surface); border-top:1px solid var(--border-bright); display:flex; overflow:hidden; position:absolute; bottom:0; left:0; right:0; height:36px; align-items:center; }
+    .ticker-label { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--amber); letter-spacing:2px; text-transform:uppercase; padding:0 12px; white-space:nowrap; border-right:1px solid var(--border-bright); height:100%; display:flex; align-items:center; background:var(--surface); z-index:2; flex-shrink:0; }
+    .ticker-scroll-wrap { flex:1; overflow:hidden; height:100%; display:flex; align-items:center; }
+    .ticker-track { display:flex; animation:scroll-ticker 45s linear infinite; white-space:nowrap; }
+    .ticker-item { display:inline-flex; align-items:center; gap:6px; padding:0 16px; border-right:1px solid var(--border); font-family:'IBM Plex Mono',monospace; font-size:11px; flex-shrink:0; }
+    .t-name { color:var(--bone-dim); }
+    .t-price { color:var(--bone); font-weight:600; }
+    .t-chg.pos { color:var(--green-bright); }
+    .t-chg.neg { color:var(--red); }
+
+    /* charts row */
+    .charts-row { display:grid; grid-template-columns:1fr 1fr 1fr; border-top:1px solid var(--border); overflow:hidden; }
+    .chart-cell { border-right:1px solid var(--border); padding:10px 12px; display:flex; flex-direction:column; gap:4px; min-width:0; }
+    .chart-cell:last-child { border-right:none; }
+    .chart-title { font-family:'IBM Plex Mono',monospace; font-size:8px; color:var(--bone-dim); letter-spacing:1.5px; text-transform:uppercase; }
+    .chart-value { font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:600; color:var(--amber); }
+    .chart-sub   { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--bone-dim); }
+
+    /* ── RIGHT PANEL ── */
+    .right-panel { background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; animation:fadeUp 0.4s ease 0.2s both; }
+    .panel-tabs { display:flex; border-bottom:1px solid var(--border-bright); flex-shrink:0; overflow-x:auto; }
+    .panel-tabs::-webkit-scrollbar { display:none; }
+    .panel-tab { flex:1; min-width:52px; padding:10px 6px; font-family:'IBM Plex Mono',monospace; font-size:8px; letter-spacing:1px; text-transform:uppercase; color:var(--bone-dim); cursor:pointer; border-right:1px solid var(--border); text-align:center; transition:all 0.2s; white-space:nowrap; user-select:none; }
+    .panel-tab:last-child { border-right:none; }
+    .panel-tab:hover  { color:var(--bone); background:rgba(200,136,42,0.05); }
+    .panel-tab.active { color:var(--amber); border-bottom:2px solid var(--amber); background:rgba(200,136,42,0.07); }
+    .panel-content { flex:1; overflow-y:auto; padding:12px; }
+    .panel-content::-webkit-scrollbar { width:3px; }
+    .panel-content::-webkit-scrollbar-thumb { background:var(--border-bright); }
+
+    /* feed */
+    .feed-item { border-bottom:1px solid var(--border); padding:9px 0; }
+    .feed-item:last-child { border-bottom:none; }
+    .feed-cat { font-family:'IBM Plex Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase; margin-bottom:3px; }
+    .feed-cat.alert  { color:var(--red); }
+    .feed-cat.market { color:var(--green); }
+    .feed-cat.policy { color:var(--blue); }
+    .feed-cat.default { color:var(--amber-dim); }
+    .feed-hl   { font-size:11px; color:var(--bone); line-height:1.5; margin-bottom:3px; }
+    .feed-meta { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--bone-dim); }
+
+    /* alerts */
+    .alert-item { background:rgba(192,57,43,0.08); border:1px solid rgba(192,57,43,0.25); border-radius:3px; padding:10px; margin-bottom:8px; }
+    .alert-level { font-family:'IBM Plex Mono',monospace; font-size:8px; color:var(--red); letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; display:flex; align-items:center; gap:5px; }
+    .alert-level.watch { color:var(--yellow); }
+    .alert-text   { font-size:11px; color:var(--bone); line-height:1.5; }
+    .alert-region { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--bone-dim); margin-top:4px; }
+
+    /* usda */
+    .report-item  { border-bottom:1px solid var(--border); padding:9px 0; }
+    .report-title { font-size:11px; color:var(--bone); margin-bottom:3px; }
+    .report-date  { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--bone-dim); }
+    .report-badge { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:8px; padding:2px 5px; border-radius:2px; background:rgba(200,136,42,0.15); color:var(--amber); margin-left:5px; }
+    .report-badge.live { background:rgba(106,184,96,0.15); color:var(--green-bright); }
+
+    /* trade */
+    .trade-table { width:100%; border-collapse:collapse; }
+    .trade-table th { font-family:'IBM Plex Mono',monospace; font-size:8px; color:var(--bone-dim); letter-spacing:1.5px; text-transform:uppercase; text-align:left; padding:5px 4px; border-bottom:1px solid var(--border-bright); }
+    .trade-table td { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--bone); padding:6px 4px; border-bottom:1px solid var(--border); }
+    .trade-table td.pos { color:var(--green-bright); }
+    .trade-table td.neg { color:var(--red); }
+
+    .section-hdr { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--amber-dim); letter-spacing:2px; text-transform:uppercase; padding:6px 0; border-bottom:1px solid var(--border); margin-bottom:8px; }
+
+    /* ai */
+    .ai-wrap  { display:flex; flex-direction:column; height:100%; }
+    .ai-msgs  { flex:1; overflow-y:auto; padding-bottom:6px; }
+    .ai-msgs::-webkit-scrollbar { width:3px; }
+    .ai-msgs::-webkit-scrollbar-thumb { background:var(--border-bright); }
+    .ai-msg       { margin-bottom:10px; animation:fadeUp 0.3s ease both; }
+    .ai-role      { font-family:'IBM Plex Mono',monospace; font-size:8px; color:var(--amber-dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:3px; }
+    .ai-role.user { color:var(--bone-dim); }
+    .ai-body      { font-size:11px; color:var(--bone); line-height:1.6; background:rgba(255,255,255,0.03); border-left:2px solid var(--border-bright); padding:6px 8px; border-radius:0 3px 3px 0; }
+    .ai-body.user { background:rgba(200,136,42,0.06); border-left-color:var(--amber-dim); color:var(--bone-dim); }
+    .ai-input-row { display:flex; gap:6px; padding-top:8px; border-top:1px solid var(--border); flex-shrink:0; }
+    .ai-input { flex:1; background:rgba(255,255,255,0.04); border:1px solid var(--border-bright); border-radius:3px; color:var(--bone); font-family:'IBM Plex Mono',monospace; font-size:11px; padding:6px 10px; outline:none; transition:border-color 0.2s; min-width:0; }
+    .ai-input:focus { border-color:var(--amber-dim); }
+    .ai-input::placeholder { color:var(--bone-dim); opacity:0.5; }
+    .ai-btn { background:var(--amber); border:none; border-radius:3px; color:var(--bg); font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; padding:6px 12px; cursor:pointer; letter-spacing:1px; text-transform:uppercase; transition:opacity 0.2s; flex-shrink:0; }
+    .ai-btn:hover    { opacity:0.85; }
+    .ai-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .typing { display:inline-flex; gap:3px; align-items:center; padding:4px 0; }
+    .typing span { width:4px; height:4px; border-radius:50%; background:var(--amber-dim); animation:pulse-dot 1s ease-in-out infinite; }
+    .typing span:nth-child(2) { animation-delay:0.2s; }
+    .typing span:nth-child(3) { animation-delay:0.4s; }
+
+    /* ── MOBILE DRAWER OVERLAY ── */
+    .drawer-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; }
+    .drawer-overlay.open { display:block; }
+    .drawer { position:fixed; top:48px; left:0; bottom:0; width:260px; background:var(--surface); border-right:1px solid var(--border-bright); z-index:201; overflow-y:auto; transform:translateX(-100%); transition:transform 0.25s ease; }
+    .drawer.open { transform:translateX(0); animation:slide-in 0.25s ease; }
+    .drawer::-webkit-scrollbar { width:3px; }
+    .drawer::-webkit-scrollbar-thumb { background:var(--border-bright); }
+
+    /* ── MOBILE BOTTOM NAV ── */
+    .mobile-nav { display:none; position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border-bright); z-index:150; height:52px; }
+    .mobile-nav-inner { display:flex; height:100%; }
+    .mobile-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; user-select:none; transition:background 0.15s; border:none; background:none; color:var(--bone-dim); padding:0; }
+    .mobile-nav-btn:hover  { background:rgba(200,136,42,0.05); }
+    .mobile-nav-btn.active { color:var(--amber); }
+    .mobile-nav-icon { font-size:14px; line-height:1; }
+    .mobile-nav-label { font-family:'IBM Plex Mono',monospace; font-size:7px; letter-spacing:1px; text-transform:uppercase; }
+
+    /* ── MOBILE MAIN CONTENT ── */
+    .mobile-screen { display:none; flex-direction:column; height:100%; overflow:hidden; }
+
+    /* ── RESPONSIVE BREAKPOINT ── */
+    @media (max-width: 900px) {
+      .dashboard { grid-template-rows:48px 1fr; height:100dvh; }
+      .header-clock { display:none; }
+      .header-divider { display:none; }
+      .header-stats { gap:10px; }
+      .header-stat-label { font-size:7px; }
+      .header-stat-value { font-size:11px; }
+      .hamburger { display:flex; }
+      .main { grid-template-columns:1fr; }
+      .sidebar { display:none; }
+      .center  { display:none; }
+      .right-panel { display:none; }
+      .mobile-nav { display:block; }
+      .mobile-screen { display:flex; }
+
+      body { overflow:hidden; }
+    }
+
+    @media (max-width: 480px) {
+      .header-stats { gap:6px; }
+      .header-stat { display:none; }
+      .header-stat:nth-child(1),
+      .header-stat:nth-child(4) { display:flex; }
+    }
+
+    /* mobile map fills screen */
+    .mobile-map-wrap { position:relative; flex:1; overflow:hidden; min-height:0; }
+    .mobile-chart-row { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--border); flex-shrink:0; }
+    .mobile-chart-cell { border-right:1px solid var(--border); padding:8px 10px; }
+    .mobile-chart-cell:last-child { border-right:none; }
+    .mobile-chart-cell:nth-child(3) { border-right:none; grid-column:1/-1; border-top:1px solid var(--border); }
+    .mobile-ticker { position:absolute; bottom:0; left:0; right:0; }
+
+    /* panel fills mobile screen */
+    .mobile-panel { flex:1; overflow-y:auto; padding:12px 12px 64px; }
+    .mobile-panel::-webkit-scrollbar { width:3px; }
+    .mobile-panel::-webkit-scrollbar-thumb { background:var(--border-bright); }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ── DATA ── */
+const TICKER_DATA = [
+  {name:"LV CME FEB", price:"182.40", change:"+1.23", pct:"+0.68%", pos:true},
+  {name:"LC CME APR", price:"184.10", change:"+0.85", pct:"+0.46%", pos:true},
+  {name:"FC CME MAR", price:"253.75", change:"-0.60", pct:"-0.24%", pos:false},
+  {name:"FC CME APR", price:"254.90", change:"-0.40", pct:"-0.16%", pos:false},
+  {name:"LH CME FEB", price:"88.20",  change:"+1.10", pct:"+1.26%", pos:true},
+  {name:"USDA CHOICE",price:"317.84", change:"+2.14", pct:"+0.68%", pos:true},
+  {name:"USDA SELECT",price:"291.23", change:"+1.70", pct:"+0.59%", pos:true},
+  {name:"CORN MAR",   price:"482.25", change:"-3.50", pct:"-0.72%", pos:false},
+  {name:"SOYBEAN MAR",price:"995.50", change:"+5.75", pct:"+0.58%", pos:true},
+];
+
+const FEED_ITEMS = [
+  {cat:"USDA REPORT",   cls:"default", hl:"Cattle on Feed report shows January placements up 4.2% YOY — feedlot inventories tightest since 2015.", time:"08:00 · USDA NASS"},
+  {cat:"WILDFIRE ALERT",cls:"alert",   hl:"Texas Panhandle fire weather conditions elevated — Red Flag Warning issued across 14 counties. 200k+ acres at risk.", time:"06:43 · NWS Amarillo"},
+  {cat:"TRADE FLOW",    cls:"market",  hl:"Japan raises quarterly beef import quota by 8%. US exporters positioned to capture estimated $340M uplift.", time:"Yesterday · USDA FAS"},
+  {cat:"MARKET INTEL",  cls:"market",  hl:"Packer margins turned negative for third consecutive week. Live cattle basis widening against April futures.", time:"Yesterday · USDA AMS"},
+  {cat:"FOIA SOURCE",   cls:"policy",  hl:"NCBA lobbying expenditures Q4 2024 filing: $2.4M in federal lobbying, 63% directed at USDA-FSIS regulatory proceedings.", time:"2 days ago · OpenSecrets"},
+  {cat:"DISEASE ALERT", cls:"alert",   hl:"Brazil MAPA confirms FMD outbreak in Pará state — 6 properties under quarantine. Potential export suspension risk.", time:"2 days ago · PAHO/WHO"},
+  {cat:"MARKET INTEL",  cls:"market",  hl:"Southern Plains cow-calf operators reporting early weaning due to D3 drought conditions. Stocker pipeline tightening.", time:"3 days ago · USDA NASS"},
+  {cat:"POLICY",        cls:"policy",  hl:"USDA FSIS proposes new country-of-origin labeling rulemaking for muscle cuts. Comment period opens March 15.", time:"4 days ago · USDA FSIS"},
+];
+
+const ALERTS = [
+  {level:"HIGH",  text:"FMD Detection — Pará, Brazil. 6 properties quarantined. Risk of USDA export suspension within 72hrs.", region:"South America · Brazil"},
+  {level:"WATCH", text:"Drought Monitor: D3–D4 conditions expanding across NM, TX Panhandle, Western KS. Pasture condition declining.", region:"Great Plains · CONUS"},
+  {level:"WATCH", text:"HPAI confirmed in commercial turkey flock, Brown County SD. Feed grain disruption possible.", region:"Northern Plains · USA"},
+];
+
+const USDA_REPORTS = [
+  {title:"Cattle on Feed",             date:"Feb 21, 2025", status:"NEW"},
+  {title:"Cold Storage Report",        date:"Feb 20, 2025", status:"NEW"},
+  {title:"Livestock Slaughter Monthly",date:"Feb 18, 2025", status:""},
+  {title:"Boxed Beef Cutout — USDA AMS",date:"Mar 01, 2025 (daily)", status:"LIVE"},
+  {title:"WASDE",                      date:"Feb 11, 2025", status:""},
+  {title:"Export Sales Reporting",     date:"Feb 27, 2025", status:"NEW"},
+  {title:"Grain Crushings & Co-Products",date:"Jan 31, 2025", status:""},
+];
+
+const TRADE_ROWS = [
+  {country:"Japan",      volume:"312K MT",value:"$1.84B",change:"+8.2%", pos:true},
+  {country:"S. Korea",   volume:"284K MT",value:"$1.63B",change:"+3.1%", pos:true},
+  {country:"Mexico",     volume:"509K MT",value:"$1.21B",change:"-1.4%", pos:false},
+  {country:"Canada",     volume:"398K MT",value:"$0.98B",change:"+0.6%", pos:true},
+  {country:"China",      volume:"188K MT",value:"$0.72B",change:"-12.3%",pos:false},
+  {country:"Taiwan",     volume:"91K MT", value:"$0.44B",change:"+5.8%", pos:true},
+  {country:"Hong Kong",  volume:"62K MT", value:"$0.29B",change:"+1.2%", pos:true},
+];
+
+const LAYERS = [
+  {id:"drought",   label:"Drought Monitor",    color:"#d4a017", on:true},
+  {id:"wildfire",  label:"Wildfire Perimeters",color:"#c0392b", on:true},
+  {id:"feedlots",  label:"Feedlot Density",    color:"#c8882a", on:true},
+  {id:"processing",label:"Processing Plants",  color:"#4a8c3f", on:false},
+  {id:"fmd",       label:"FMD Zones (Global)", color:"#9b59b6", on:true},
+  {id:"trade",     label:"Trade Routes",       color:"#2a6080", on:false},
+  {id:"pasture",   label:"Pasture Conditions", color:"#6ab860", on:false},
+];
+
+const SPARKLINES = {
+  cattle:[178,179.5,181,180,179,181.5,182,181,183,182.4],
+  choice:[310,312,314,313,315,316,315,317,318,317.84],
+  trade: [2.1,2.3,2.0,2.4,2.5,2.3,2.6,2.7,2.8,2.81],
+};
+
+const AI_CANNED = {
+  default:"Based on current USDA data and CME futures: Live cattle April contracts are trading at $184.10, up 0.46%. The most significant risk factor this week is the Texas Panhandle fire weather — Red Flag conditions in Q1 historically correlate with 3–5% supply disruption in the Southern Plains feedlot corridor.",
+  price:  "Live cattle futures showing strength. April at $184.10/cwt, feeder cattle under mild pressure at $253.75. Packer margins negative for third consecutive week — historically precedes either a cattle price pullback or a packing plant throughput cut.",
+  disease:"Active disease flags: FMD in Pará, Brazil — 6 properties under quarantine. Brazil represents ~14% of global traded beef volume. Full USDA suspension would redirect significant tonnage to Australian and US exporters. HPAI in South Dakota is secondary concern.",
+  trade:  "Top US beef export destinations: Japan leading at $1.84B annualized, South Korea at $1.63B. Japan raised its quarterly import quota 8% — estimated $340M uplift for US producers. China volume down 12.3% YOY amid trade friction.",
+  drought:"D3–D4 exceptional drought expanding across eastern NM, TX Panhandle, and western KS. This is prime stocker and backgrounder country. Early-season drought at this severity typically forces early liquidation — depresses feeder prices short-term but tightens supply by Q3.",
+};
+
+function aiRespond(q) {
+  const l = q.toLowerCase();
+  if (l.match(/price|futures|cattle|market/))    return AI_CANNED.price;
+  if (l.match(/disease|fmd|outbreak|foot/))      return AI_CANNED.disease;
+  if (l.match(/trade|export|japan|korea/))       return AI_CANNED.trade;
+  if (l.match(/drought|fire|wildfire|rain|dry/)) return AI_CANNED.drought;
+  return AI_CANNED.default;
+}
+
+/* ── COMPONENTS ── */
+function Sparkline({data, color, height=44}) {
+  const w=200, h=height;
+  const min=Math.min(...data), max=Math.max(...data), rng=max-min||1;
+  const pts=data.map((v,i)=>{
+    const x=(i/(data.length-1))*w;
+    const y=h-((v-min)/rng)*(h-6)-3;
+    return `${x},${y}`;
+  });
+  const id=`g${color.replace("#","")}`;
+  const [lx,ly]=pts[pts.length-1].split(",");
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%",height,display:"block"}}>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.28"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${h} ${pts.join(" ")} ${w},${h}`} fill={`url(#${id})`}/>
+      <polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth="1.5"/>
+      <circle cx={lx} cy={ly} r="3" fill={color}/>
+    </svg>
+  );
+}
+
+function WorldMap({active}) {
+  const drought  = active.includes("drought");
+  const wildfire = active.includes("wildfire");
+  const feedlots = active.includes("feedlots");
+  const fmd      = active.includes("fmd");
+  const tradeR   = active.includes("trade");
+  return (
+    <svg viewBox="0 0 900 420" style={{width:"100%",height:"100%",background:"#0a0906"}}>
+      {[...Array(10)].map((_,i)=><line key={"v"+i} x1={i*90} y1={0} x2={i*90} y2={420} stroke="#161410" strokeWidth="0.5"/>)}
+      {[...Array(6)].map((_,i) =><line key={"h"+i} x1={0} y1={i*70} x2={900} y2={i*70} stroke="#161410" strokeWidth="0.5"/>)}
+
+      {/* continents */}
+      <path d="M78,52 L222,47 L287,76 L294,157 L264,197 L244,247 L204,277 L184,257 L162,227 L100,177 L66,136 Z" fill="#1c1810" stroke="#2a2418" strokeWidth="0.8"/>
+      <path d="M193,287 L254,282 L284,307 L284,377 L254,415 L214,415 L192,398 L172,356 L178,307 Z" fill="#1c1810" stroke="#2a2418" strokeWidth="0.8"/>
+      <path d="M386,46 L474,46 L494,86 L474,116 L434,126 L392,106 L372,76 Z" fill="#1c1810" stroke="#2a2418" strokeWidth="0.8"/>
+      <path d="M386,136 L464,131 L494,156 L494,236 L474,296 L434,326 L402,316 L376,286 L366,236 L372,166 Z" fill="#1c1810" stroke="#2a2418" strokeWidth="0.8"/>
+      <path d="M506,46 L754,41 L824,76 L814,156 L764,196 L684,206 L614,186 L554,166 L506,126 Z" fill="#1c1810" stroke="#2a2418" strokeWidth="0.8"/>
+      <path d="M686,276 L794,266 L834,296 L824,356 L774,376 L714,366 L684,336 L681,296 Z" fill="#1c1810" stroke="#2a2418" strokeWidth="0.8"/>
+
+      {drought && <ellipse cx="183" cy="171" rx="58" ry="41" fill="rgba(212,160,23,0.13)" stroke="#d4a017" strokeWidth="1.2" strokeDasharray="5,3"/>}
+
+      {wildfire && <>
+        <circle cx="161" cy="166" r="10" fill="rgba(192,57,43,0.28)"/>
+        <circle cx="172" cy="158" r="6"  fill="rgba(192,57,43,0.44)"/>
+        <circle cx="161" cy="166" r="5" fill="#c0392b">
+          <animate attributeName="r"       values="5;12;5"  dur="1.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.9;0;0.9" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+      </>}
+
+      {feedlots && <>
+        <circle cx="183" cy="171" r="20" fill="rgba(200,136,42,0.10)" stroke="rgba(200,136,42,0.35)" strokeWidth="0.8"/>
+        <circle cx="748" cy="316" r="14" fill="rgba(200,136,42,0.09)" stroke="rgba(200,136,42,0.26)" strokeWidth="0.8"/>
+        <circle cx="236" cy="336" r="12" fill="rgba(200,136,42,0.09)" stroke="rgba(200,136,42,0.26)" strokeWidth="0.8"/>
+      </>}
+
+      {fmd && <>
+        <circle cx="252" cy="311" r="14" fill="rgba(155,89,182,0.20)" stroke="#9b59b6" strokeWidth="1.2" strokeDasharray="3,2"/>
+        <circle cx="252" cy="311" r="5" fill="#9b59b6">
+          <animate attributeName="r"       values="5;16;5"  dur="2.2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0;1"   dur="2.2s" repeatCount="indefinite"/>
+        </circle>
+      </>}
+
+      {tradeR && <>
+        <path d="M183,168 Q450,80 752,115" fill="none" stroke="rgba(42,96,128,0.32)" strokeWidth="1.4" strokeDasharray="7,4"/>
+        <path d="M183,168 Q320,120 660,130" fill="none" stroke="rgba(42,96,128,0.22)" strokeWidth="1" strokeDasharray="5,4"/>
+        <path d="M183,168 Q270,260 236,336" fill="none" stroke="rgba(42,96,128,0.20)" strokeWidth="1" strokeDasharray="4,4"/>
+      </>}
+
+      {[
+        {x:163,y:175,t:"USA"},{x:228,t:"BRA",y:346},{x:748,t:"AUS",y:320},
+        {x:656,t:"IND",y:128},{x:426,t:"EUR",y:76}, {x:676,t:"CHN",y:76},
+      ].map(l=>(
+        <text key={l.t} x={l.x} y={l.y} textAnchor="middle"
+          fill="rgba(232,224,208,0.28)" fontSize="8"
+          fontFamily="IBM Plex Mono, monospace" letterSpacing="2">{l.t}</text>
+      ))}
+    </svg>
+  );
+}
+
+function Ticker() {
+  const double = [...TICKER_DATA,...TICKER_DATA];
+  return (
+    <div className="ticker-bar">
+      <div className="ticker-label">CME · USDA</div>
+      <div className="ticker-scroll-wrap">
+        <div className="ticker-track">
+          {double.map((t,i)=>(
+            <div key={i} className="ticker-item">
+              <span className="t-name">{t.name}</span>
+              <span className="t-price">{t.price}</span>
+              <span className={`t-chg ${t.pos?"pos":"neg"}`}>{t.change} ({t.pct})</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeedPanel() {
+  return FEED_ITEMS.map((item,i)=>(
+    <div key={i} className="feed-item">
+      <div className={`feed-cat ${item.cls}`}>{item.cat}</div>
+      <div className="feed-hl">{item.hl}</div>
+      <div className="feed-meta">{item.time}</div>
+    </div>
+  ));
+}
+
+function AlertsPanel() {
+  return <>
+    <div className="section-hdr">Active Alerts</div>
+    {ALERTS.map((a,i)=>(
+      <div key={i} className="alert-item">
+        <div className={`alert-level ${a.level==="WATCH"?"watch":""}`}>
+          <div style={{width:5,height:5,borderRadius:"50%",background:a.level==="HIGH"?"var(--red)":"var(--yellow)",animation:"pulse-dot 1.5s ease-in-out infinite"}}/>
+          {a.level}
+        </div>
+        <div className="alert-text">{a.text}</div>
+        <div className="alert-region">{a.region}</div>
+      </div>
+    ))}
+  </>;
+}
+
+function USDAPanel() {
+  return <>
+    <div className="section-hdr">USDA Reports</div>
+    {USDA_REPORTS.map((r,i)=>(
+      <div key={i} className="report-item">
+        <div className="report-title">
+          {r.title}
+          {r.status && <span className={`report-badge ${r.status==="LIVE"?"live":""}`}>{r.status}</span>}
+        </div>
+        <div className="report-date">{r.date}</div>
+      </div>
+    ))}
+  </>;
+}
+
+function TradePanel() {
+  return <>
+    <div className="section-hdr">US Beef Export Flows — 2024 YTD</div>
+    <table className="trade-table">
+      <thead><tr><th>MARKET</th><th>VOLUME</th><th>VALUE</th><th>YOY</th></tr></thead>
+      <tbody>
+        {TRADE_ROWS.map((r,i)=>(
+          <tr key={i}>
+            <td>{r.country}</td>
+            <td>{r.volume}</td>
+            <td>{r.value}</td>
+            <td className={r.pos?"pos":"neg"}>{r.change}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>;
+}
+
+function AIPanel() {
+  const [msgs,   setMsgs]   = useState([{role:"a",text:"BeefDeck AI Analyst online. Ask me about cattle prices, USDA data, trade flows, disease alerts, or rancher-direct markets."}]);
+  const [input,  setInput]  = useState("");
+  const [loading,setLoading]= useState(false);
+  const endRef = useRef(null);
+
+  useEffect(()=>{ if(endRef.current) endRef.current.scrollIntoView({behavior:"smooth"}); },[msgs]);
+
+  const send = async () => {
+    if (!input.trim()||loading) return;
+    const q=input.trim(); setInput("");
+    setMsgs(m=>[...m,{role:"u",text:q}]);
+    setLoading(true);
+    await new Promise(r=>setTimeout(r,1200));
+    setMsgs(m=>[...m,{role:"a",text:aiRespond(q)}]);
+    setLoading(false);
+  };
+
+  return (
+    <div className="ai-wrap">
+      <div className="ai-msgs">
+        {msgs.map((m,i)=>(
+          <div key={i} className="ai-msg">
+            <div className={`ai-role ${m.role==="u"?"user":""}`}>{m.role==="u"?"YOU":"BEEFDECK ANALYST"}</div>
+            <div className={`ai-body ${m.role==="u"?"user":""}`}>{m.text}</div>
+          </div>
+        ))}
+        {loading && (
+          <div className="ai-msg">
+            <div className="ai-role">BEEFDECK ANALYST</div>
+            <div className="ai-body"><div className="typing"><span/><span/><span/></div></div>
+          </div>
+        )}
+        <div ref={endRef}/>
+      </div>
+      <div className="ai-input-row">
+        <input className="ai-input" placeholder="Ask about prices, drought, FMD, trade..."
+          value={input} onChange={e=>setInput(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&send()}/>
+        <button className="ai-btn" onClick={send} disabled={loading}>ASK</button>
+      </div>
+    </div>
+  );
+}
+
+function ChartCells() {
+  return <>
+    <div className="chart-cell">
+      <div className="chart-title">Live Cattle — Apr CME</div>
+      <div className="chart-value">$184.10</div>
+      <div className="chart-sub val-up">▲ +0.85 (+0.46%) 30d</div>
+      <Sparkline data={SPARKLINES.cattle} color="#c8882a" height={42}/>
+    </div>
+    <div className="chart-cell">
+      <div className="chart-title">Choice Cutout</div>
+      <div className="chart-value">$317.84</div>
+      <div className="chart-sub val-up">▲ +2.14 (+0.68%) 30d</div>
+      <Sparkline data={SPARKLINES.choice} color="#6ab860" height={42}/>
+    </div>
+    <div className="chart-cell">
+      <div className="chart-title">US Beef Exports</div>
+      <div className="chart-value">$8.34B</div>
+      <div className="chart-sub val-up">▲ YOY +4.2% — Japan #1</div>
+      <Sparkline data={SPARKLINES.trade} color="#2a6080" height={42}/>
+    </div>
+  </>;
+}
+
+/* ── APP ── */
+export default function App() {
+  const [activeLayers,  setActiveLayers]  = useState(LAYERS.filter(l=>l.on).map(l=>l.id));
+  const [activeFilters, setActiveFilters] = useState(["prices","usda","disease","drought","trade"]);
+  const [rightTab,      setRightTab]      = useState("feed");
+  const [mobileTab,     setMobileTab]     = useState("map");
+  const [drawerOpen,    setDrawerOpen]    = useState(false);
+  const [clock,         setClock]         = useState(new Date());
+
+  useEffect(()=>{ const t=setInterval(()=>setClock(new Date()),1000); return ()=>clearInterval(t); },[]);
+
+  const toggleLayer  = id => setActiveLayers(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+  const toggleFilter = id => setActiveFilters(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+
+  const FILTERS = [{id:"prices",label:"CME Futures"},{id:"usda",label:"USDA Reports"},{id:"disease",label:"Disease Alerts"},{id:"drought",label:"Drought & Fire"},{id:"trade",label:"Trade Flows"},{id:"rancher",label:"BeefMaps Feed"}];
+
+  const SidebarContent = () => <>
+    <div className="sidebar-section">
+      <div className="sidebar-section-label">Map Layers</div>
+      {LAYERS.map(l=>(
+        <div key={l.id} className={`layer-toggle${activeLayers.includes(l.id)?" active":""}`} onClick={()=>toggleLayer(l.id)}>
+          <div className="toggle-dot" style={activeLayers.includes(l.id)?{background:l.color,borderColor:l.color,boxShadow:`0 0 5px ${l.color}80`}:{}}/>
+          <span className="toggle-label">{l.label}</span>
+        </div>
+      ))}
+    </div>
+    <div className="sidebar-section">
+      <div className="sidebar-section-label">Intelligence Feeds</div>
+      {FILTERS.map(f=>(
+        <div key={f.id} className={`layer-toggle${activeFilters.includes(f.id)?" active":""}`} onClick={()=>toggleFilter(f.id)}>
+          <div className="toggle-dot"/>
+          <span className="toggle-label">{f.label}</span>
+        </div>
+      ))}
+    </div>
+    <div className="sidebar-section" style={{flex:1}}>
+      <div className="sidebar-section-label">Alert Summary</div>
+      {ALERTS.map((a,i)=>(
+        <div key={i} className="sidebar-alert-mini" style={{borderLeft:`2px solid ${a.level==="HIGH"?"#c0392b":"#d4a017"}`}}>
+          <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:8,color:a.level==="HIGH"?"var(--red)":"var(--yellow)",letterSpacing:2,marginBottom:3}}>{a.level}</div>
+          <div style={{fontSize:10,color:"var(--bone)",lineHeight:1.4}}>{a.text.slice(0,68)}…</div>
+          <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:8,color:"var(--bone-dim)",marginTop:2}}>{a.region}</div>
+        </div>
+      ))}
+    </div>
+  </>;
+
+  const panelContent = (tab) => {
+    if (tab==="feed")    return <FeedPanel/>;
+    if (tab==="alerts")  return <AlertsPanel/>;
+    if (tab==="usda")    return <USDAPanel/>;
+    if (tab==="trade")   return <TradePanel/>;
+    if (tab==="ai")      return <AIPanel/>;
+    return null;
+  };
+
+  return (
+    <>
+      <div className="scanline"/>
+
+      {/* ── MOBILE DRAWER ── */}
+      <div className={`drawer-overlay${drawerOpen?" open":""}`} onClick={()=>setDrawerOpen(false)}/>
+      <div className={`drawer${drawerOpen?" open":""}`}>
+        <SidebarContent/>
+      </div>
+
+      <div className="dashboard">
+        {/* HEADER */}
+        <header className="header">
+          <div className="hamburger" onClick={()=>setDrawerOpen(o=>!o)}>
+            <span style={drawerOpen?{transform:"rotate(45deg) translate(4px,4px)"}:{}}/>
+            <span style={drawerOpen?{opacity:0}:{}}/>
+            <span style={drawerOpen?{transform:"rotate(-45deg) translate(4px,-4px)"}:{}}/>
+          </div>
+          <div className="header-logo">BeefDeck<span>INTELLIGENCE</span></div>
+          <div className="header-divider"/>
+          <div className="live-badge"><div className="live-dot"/>Live</div>
+          <div className="header-clock">{clock.toUTCString().slice(0,25)} UTC</div>
+          <div className="header-stats">
+            <div className="header-stat">
+              <span className="header-stat-label">LC Apr</span>
+              <span className="header-stat-value val-up">$184.10 ▲</span>
+            </div>
+            <div className="header-stat">
+              <span className="header-stat-label">Choice</span>
+              <span className="header-stat-value val-up">$317.84 ▲</span>
+            </div>
+            <div className="header-stat">
+              <span className="header-stat-label">Feeder</span>
+              <span className="header-stat-value val-down">$253.75 ▼</span>
+            </div>
+            <div className="header-stat">
+              <span className="header-stat-label">Alerts</span>
+              <span className="header-stat-value val-red">3 ⬥</span>
+            </div>
+          </div>
+        </header>
+
+        {/* ── DESKTOP MAIN ── */}
+        <div className="main">
+          {/* Sidebar */}
+          <aside className="sidebar"><SidebarContent/></aside>
+
+          {/* Center */}
+          <div className="center">
+            <div className="map-area">
+              <div className="map-container"><WorldMap active={activeLayers}/></div>
+              <div className="map-overlay-label">Global Beef Intelligence Map</div>
+              <div className="map-legend">
+                {activeLayers.map(id=>{
+                  const l=LAYERS.find(x=>x.id===id);
+                  return l?<div key={id} className="legend-item"><div className="legend-dot" style={{background:l.color}}/>{l.label}</div>:null;
+                })}
+              </div>
+              <Ticker/>
+            </div>
+            <div className="charts-row"><ChartCells/></div>
+          </div>
+
+          {/* Right Panel */}
+          <div className="right-panel">
+            <div className="panel-tabs">
+              {[["feed","Intel Feed"],["alerts","Alerts"],["usda","USDA"],["trade","Trade"],["ai","AI Analyst"]].map(([id,label])=>(
+                <div key={id} className={`panel-tab${rightTab===id?" active":""}`} onClick={()=>setRightTab(id)}>{label}</div>
+              ))}
+            </div>
+            <div className="panel-content">{panelContent(rightTab)}</div>
+          </div>
+        </div>
+
+        {/* ── MOBILE SCREENS ── */}
+        <div className="mobile-screen">
+          {mobileTab==="map" && (
+            <div style={{display:"flex",flexDirection:"column",height:"100%",paddingBottom:"52px"}}>
+              <div className="mobile-map-wrap">
+                <div style={{position:"absolute",inset:0,bottom:36}}>
+                  <WorldMap active={activeLayers}/>
+                </div>
+                <div className="map-overlay-label">Global Beef Intelligence</div>
+                <div className="map-legend" style={{bottom:44}}>
+                  {activeLayers.slice(0,3).map(id=>{
+                    const l=LAYERS.find(x=>x.id===id);
+                    return l?<div key={id} className="legend-item"><div className="legend-dot" style={{background:l.color}}/>{l.label}</div>:null;
+                  })}
+                </div>
+                <Ticker/>
+              </div>
+              <div className="mobile-chart-row">
+                <div className="mobile-chart-cell">
+                  <div className="chart-title">LC Apr CME</div>
+                  <div className="chart-value" style={{fontSize:15}}>$184.10</div>
+                  <div className="chart-sub val-up">▲ +0.46%</div>
+                  <Sparkline data={SPARKLINES.cattle} color="#c8882a" height={32}/>
+                </div>
+                <div className="mobile-chart-cell">
+                  <div className="chart-title">Choice Cutout</div>
+                  <div className="chart-value" style={{fontSize:15}}>$317.84</div>
+                  <div className="chart-sub val-up">▲ +0.68%</div>
+                  <Sparkline data={SPARKLINES.choice} color="#6ab860" height={32}/>
+                </div>
+                <div className="mobile-chart-cell">
+                  <div className="chart-title">US Beef Exports</div>
+                  <div className="chart-value" style={{fontSize:15}}>$8.34B</div>
+                  <div className="chart-sub val-up">▲ YOY +4.2%</div>
+                  <Sparkline data={SPARKLINES.trade} color="#2a6080" height={32}/>
+                </div>
+              </div>
+            </div>
+          )}
+          {mobileTab==="feed"   && <div className="mobile-panel"><FeedPanel/></div>}
+          {mobileTab==="alerts" && <div className="mobile-panel"><AlertsPanel/></div>}
+          {mobileTab==="data"   && (
+            <div className="mobile-panel">
+              <div style={{marginBottom:16}}><USDAPanel/></div>
+              <TradePanel/>
+            </div>
+          )}
+          {mobileTab==="ai"     && <div className="mobile-panel" style={{display:"flex",flexDirection:"column"}}><AIPanel/></div>}
+        </div>
+      </div>
+
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <nav className="mobile-nav">
+        <div className="mobile-nav-inner">
+          {[
+            ["map",    "🗺",  "Map"],
+            ["feed",   "📡", "Feed"],
+            ["alerts", "⚠",  "Alerts"],
+            ["data",   "📊", "Data"],
+            ["ai",     "🤖", "AI"],
+          ].map(([id,icon,label])=>(
+            <button key={id} className={`mobile-nav-btn${mobileTab===id?" active":""}`} onClick={()=>setMobileTab(id)}>
+              <span className="mobile-nav-icon">{icon}</span>
+              <span className="mobile-nav-label">{label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
