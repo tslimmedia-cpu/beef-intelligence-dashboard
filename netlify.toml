@@ -11,10 +11,10 @@
 # Production environment - set VITE_API_URL in Netlify dashboard
 # Example: https://api.beefmaps.com or https://your-server.com:3001
 [context.production]
-  environment = { VITE_API_URL = "https://api.beefmaps.com" }
+  environment = { VITE_API_URL = "https://beef-intelligence-dashboard-production.up.railway.app" }
 
 [context.deploy-preview]
-  environment = { VITE_API_URL = "https://api.beefmaps.com" }
+  environment = { VITE_API_URL = "https://beef-intelligence-dashboard-production.up.railway.app" }
 
 [context.branch-deploy]
-  environment = { VITE_API_URL = "https://api.beefmaps.com" }
+  environment = { VITE_API_URL = "https://beef-intelligence-dashboard-production.up.railway.app" }
