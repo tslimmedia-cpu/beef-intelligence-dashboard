@@ -1238,23 +1238,18 @@ app.get('/api/feeds', (req, res) => {
 // Scheduled Updates
 // ============================================================
 
-// Initial fetch on startup
+// Initial fetch on startup — staggered to avoid memory spike
 (async () => {
   console.log('Initial data fetch...');
-  await Promise.all([
-    fetchCMEPrices(),
-    fetchUSDAams(),
-    fetchUSDANass(),
-    fetchUSDAFas(),
-    fetchDroughtMonitor(),
-    fetchWildfire(),
-    fetchDiseaseAlerts(),
-    fetchFederalRegister(),
-    fetchSECFilings(),
-    fetchGovContracts(),
-    fetchBeefNews(),
-  ]);
-  // Build intel feed after all other data is loaded
+  // Wave 1: critical price data
+  await Promise.all([fetchCMEPrices(), fetchUSDAams(), fetchBeefNews()]);
+  // Wave 2: USDA reports
+  await Promise.all([fetchUSDANass(), fetchUSDAFas()]);
+  // Wave 3: map/geo data (was the memory killer - now safe with point data)
+  await Promise.all([fetchDroughtMonitor(), fetchWildfire(), fetchDiseaseAlerts()]);
+  // Wave 4: investigative data
+  await Promise.all([fetchFederalRegister(), fetchSECFilings(), fetchGovContracts()]);
+  // Final: build intel feed with all data loaded
   await fetchIntelFeed();
   console.log('✅ Initial data loaded');
 })();
