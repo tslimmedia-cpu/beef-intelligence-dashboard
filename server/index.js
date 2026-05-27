@@ -1366,8 +1366,8 @@ cron.schedule('1 15 * * *', () => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Beef Index API running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/api/health`);
-  console.log(`Dashboard: http://localhost:${PORT}/api/dashboard`);
+console.log(`Starting server — PORT=${PORT} NODE_ENV=${process.env.NODE_ENV || 'development'} GROQ=${process.env.GROQ_API_KEY ? 'set' : 'MISSING'}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Beef Index API listening on 0.0.0.0:${PORT}`);
+  console.log(`Health: http://localhost:${PORT}/api/health`);
 });
