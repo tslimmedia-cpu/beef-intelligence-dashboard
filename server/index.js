@@ -1281,71 +1281,88 @@ setTimeout(async () => {
   console.log('✅ All data loaded');
 }, 80000);
 
-// CME: Every 15 minutes
-cron.schedule('*/15 * * * *', () => {
+// ── STAGGERED CRON JOBS ──────────────────────────────────────────
+// IMPORTANT: never let two heavy fetches fire in the same minute.
+// Memory spike from simultaneous crons is the #1 OOM cause.
+//
+// Minute map (within each 30-min window):
+//  :02/:17/:32/:47  — CME (lightweight, Yahoo Finance)
+//  :06/:36          — USDA AMS (medium, MPR API)
+//  :11/:41          — BeefNews (medium, RSS)
+//  :14/:44          — Intel Feed rebuild (in-memory only, no HTTP)
+//  :22              — Disease Alerts (every 4h, lightweight RSS)
+//  :27              — Drought Monitor (weekly Thu, heavy CSV)
+//  :07 daily        — Federal Register
+//  :09 daily        — SEC Filings (heavy - Tyson EDGAR)
+//  :23 Mon          — Govt Contracts
+//  :05 daily        — Wildfire
+//  15:01 daily      — USDA NASS
+// ────────────────────────────────────────────────────────────────
+
+// CME: Every 15 min — :02, :17, :32, :47
+cron.schedule('2,17,32,47 * * * *', () => {
   console.log('Updating CME prices...');
-  fetchCMEPrices();
+  fetchCMEPrices().catch(() => {});
 });
 
-// Intel Feed: Every 2 hours
-cron.schedule('0 */2 * * *', async () => {
-  console.log('Updating Intel Feed...');
-  await fetchIntelFeed();
-});
-
-// USDA AMS: Every 30 minutes (matches their update schedule)
-cron.schedule('*/30 * * * *', () => {
+// USDA AMS: Every 30 min — :06, :36
+cron.schedule('6,36 * * * *', () => {
   console.log('Updating USDA AMS...');
-  fetchUSDAams();
+  fetchUSDAams().catch(() => {});
 });
 
-// USDA NASS: Daily at 3 PM EST (their release time)
-cron.schedule('0 15 * * *', () => {
-  console.log('Updating USDA NASS...');
-  fetchUSDANass();
-});
-
-// BeefNews.org: Every 30 minutes (active publication)
-cron.schedule('*/30 * * * *', async () => {
+// BeefNews: Every 30 min — :11, :41
+cron.schedule('11,41 * * * *', async () => {
   console.log('Updating BeefNews...');
-  await fetchBeefNews();
-  await fetchIntelFeed(); // rebuild intel feed with fresh articles
+  await fetchBeefNews().catch(() => {});
 });
 
-// Federal Register: Daily (they publish continuously)
-cron.schedule('0 7 * * *', () => {
-  console.log('Updating Federal Register...');
-  fetchFederalRegister();
+// Intel Feed rebuild: Every 30 min — :14, :44 (after BeefNews has finished)
+cron.schedule('14,44 * * * *', async () => {
+  console.log('Updating Intel Feed...');
+  await fetchIntelFeed().catch(() => {});
 });
 
-// SEC Filings: Daily (companies file throughout the day)
-cron.schedule('30 7 * * *', () => {
-  console.log('Updating SEC Filings...');
-  fetchSECFilings();
-});
-
-// USASpending.gov: Weekly (contract data updates slowly)
-cron.schedule('0 6 * * 1', () => {
-  console.log('Updating Govt Contracts...');
-  fetchGovContracts();
-});
-
-// Drought Monitor: Weekly Thursday (their release day)
-cron.schedule('0 8 * * 4', () => {
-  console.log('Updating Drought Monitor...');
-  fetchDroughtMonitor();
-});
-
-// Wildfire: Daily at 6 AM EST
-cron.schedule('0 6 * * *', () => {
-  console.log('Updating Wildfire...');
-  fetchWildfire();
-});
-
-// Disease Alerts: Every 4 hours
-cron.schedule('0 */4 * * *', () => {
+// Disease Alerts: Every 4 hours — :22
+cron.schedule('22 */4 * * *', () => {
   console.log('Updating Disease Alerts...');
-  fetchDiseaseAlerts();
+  fetchDiseaseAlerts().catch(() => {});
+});
+
+// Wildfire: Daily at 6:05 AM UTC
+cron.schedule('5 6 * * *', () => {
+  console.log('Updating Wildfire...');
+  fetchWildfire().catch(() => {});
+});
+
+// Drought Monitor: Weekly Thursday at 8:27 AM UTC
+cron.schedule('27 8 * * 4', () => {
+  console.log('Updating Drought Monitor...');
+  fetchDroughtMonitor().catch(() => {});
+});
+
+// Federal Register: Daily at 7:07 AM UTC
+cron.schedule('7 7 * * *', () => {
+  console.log('Updating Federal Register...');
+  fetchFederalRegister().catch(() => {});
+});
+
+// SEC Filings: Daily at 7:09 AM UTC
+cron.schedule('9 7 * * *', () => {
+  console.log('Updating SEC Filings...');
+  fetchSECFilings().catch(() => {});
+});
+
+// USASpending: Weekly Monday at 6:23 AM UTC
+cron.schedule('23 6 * * 1', () => {
+  console.log('Updating Govt Contracts...');
+  fetchGovContracts().catch(() => {});
+});
+
+// USDA NASS: Daily at 3:01 PM UTC (their release time)
+cron.schedule('1 15 * * *', () => {
+  console.log('Updating USDA NASS...');
+  fetchUSDANass().catch(() => {});
 });
 
 const PORT = process.env.PORT || 3001;
