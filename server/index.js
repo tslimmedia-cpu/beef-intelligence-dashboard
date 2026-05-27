@@ -1242,44 +1242,9 @@ app.get('/api/feeds', (req, res) => {
 
 // Initial fetch on startup — spread over time so memory never spikes
 // Server binds to PORT immediately; data populates progressively
-console.log('Scheduling startup data fetches...');
-
-// t=0s: CME prices only (smallest fetch)
-fetchCMEPrices().catch(() => {});
-
-// t=8s: USDA AMS + BeefNews
-setTimeout(async () => {
-  await fetchUSDAams().catch(() => {});
-  await fetchBeefNews().catch(() => {});
-  await fetchIntelFeed().catch(() => {});
-  console.log('Wave 1 done (prices + news)');
-}, 8000);
-
-// t=25s: NASS + FAS + drought
-setTimeout(async () => {
-  await fetchUSDANass().catch(() => {});
-  await fetchUSDAFas().catch(() => {});
-  await fetchDroughtMonitor().catch(() => {});
-  await fetchIntelFeed().catch(() => {});
-  console.log('Wave 2 done (USDA reports + drought)');
-}, 25000);
-
-// t=50s: wildfire + disease alerts
-setTimeout(async () => {
-  await fetchWildfire().catch(() => {});
-  await fetchDiseaseAlerts().catch(() => {});
-  await fetchIntelFeed().catch(() => {});
-  console.log('Wave 3 done (wildfire + disease)');
-}, 50000);
-
-// t=80s: investigative data (heaviest - SEC EDGAR)
-setTimeout(async () => {
-  await fetchFederalRegister().catch(() => {});
-  await fetchSECFilings().catch(() => {});
-  await fetchGovContracts().catch(() => {});
-  await fetchIntelFeed().catch(() => {});
-  console.log('✅ All data loaded');
-}, 80000);
+// Startup fetches are initiated INSIDE app.listen callback
+// so they only begin after the port is confirmed bound and
+// Railway's health check can already reach /api/health
 
 // ── STAGGERED CRON JOBS ──────────────────────────────────────────
 // IMPORTANT: never let two heavy fetches fire in the same minute.
@@ -1366,8 +1331,49 @@ cron.schedule('1 15 * * *', () => {
 });
 
 const PORT = process.env.PORT || 3001;
-console.log(`Starting server — PORT=${PORT} NODE_ENV=${process.env.NODE_ENV || 'development'} GROQ=${process.env.GROQ_API_KEY ? 'set' : 'MISSING'}`);
+console.log(`Starting — PORT=${PORT} GROQ=${process.env.GROQ_API_KEY ? 'set' : 'MISSING'}`);
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Beef Index API listening on 0.0.0.0:${PORT}`);
-  console.log(`Health: http://localhost:${PORT}/api/health`);
+
+  // ── Startup data fetches ───────────────────────────────────────
+  // Initiated here so the port is confirmed bound BEFORE any fetches
+  // start — Railway health check can always reach /api/health
+
+  // t=0: CME (tiny, fast)
+  fetchCMEPrices().catch(() => {});
+
+  // t=8s: prices + news
+  setTimeout(async () => {
+    await fetchUSDAams().catch(() => {});
+    await fetchBeefNews().catch(() => {});
+    await fetchIntelFeed().catch(() => {});
+    console.log('Wave 1 done (AMS + news)');
+  }, 8000);
+
+  // t=25s: USDA reports + drought
+  setTimeout(async () => {
+    await fetchUSDANass().catch(() => {});
+    await fetchUSDAFas().catch(() => {});
+    await fetchDroughtMonitor().catch(() => {});
+    await fetchIntelFeed().catch(() => {});
+    console.log('Wave 2 done (NASS + drought)');
+  }, 25000);
+
+  // t=50s: geo/disease
+  setTimeout(async () => {
+    await fetchWildfire().catch(() => {});
+    await fetchDiseaseAlerts().catch(() => {});
+    await fetchIntelFeed().catch(() => {});
+    console.log('Wave 3 done (wildfire + disease)');
+  }, 50000);
+
+  // t=80s: investigative (heaviest — SEC EDGAR)
+  setTimeout(async () => {
+    await fetchFederalRegister().catch(() => {});
+    await fetchSECFilings().catch(() => {});
+    await fetchGovContracts().catch(() => {});
+    await fetchIntelFeed().catch(() => {});
+    console.log('✅ All startup data loaded');
+  }, 80000);
 });
