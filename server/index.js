@@ -269,18 +269,27 @@ async function fetchDroughtMonitor() {
 // ============================================================
 async function fetchWildfire() {
   try {
+    // Use incident POINTS (not perimeters) to avoid massive GeoJSON polygon data
     const wfRes = await axios.get(
-      'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query',
+      'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Locations/FeatureServer/0/query',
       {
-        params: { where: '1=1', outFields: '*', f: 'geojson' },
+        params: {
+          where: 'DailyAcres > 100',
+          outFields: 'IncidentName,DailyAcres,PercentContained,POOState,FireCause,ModifiedOnDateTime_dt',
+          orderByFields: 'DailyAcres DESC',
+          resultRecordCount: 50,
+          f: 'geojson',
+        },
         timeout: 20000,
       }
     );
-    cache.wildfire = {
-      features: wfRes.data?.features || [],
-      updated: new Date().toISOString(),
-    };
-    console.log(`  Wildfire: ${cache.wildfire.features.length} fires`);
+    const features = (wfRes.data?.features || []).map(f => ({
+      type: f.type,
+      geometry: f.geometry,  // just a point - tiny
+      properties: f.properties,
+    }));
+    cache.wildfire = { features, updated: new Date().toISOString() };
+    console.log(`  Wildfire: ${features.length} fires`);
   } catch (err) {
     console.error('Wildfire error:', err.message);
   }
@@ -600,8 +609,8 @@ async function fetchBeefNews() {
       console.error('BeefNews llms.txt error:', llmResult.reason?.message);
     }
 
-    cache.beefnews = { articles, llmContext, updated: new Date().toISOString() };
-    console.log(`  BeefNews: ${articles.length} articles, ${llmContext.length} chars of LLM context`);
+    cache.beefnews = { articles: articles.slice(0, 30), llmContext, updated: new Date().toISOString() };
+    console.log(`  BeefNews: ${articles.length} articles (capped at 30), ${llmContext.length} chars of LLM context`);
   } catch (err) {
     console.error('BeefNews error:', err.message);
   }
