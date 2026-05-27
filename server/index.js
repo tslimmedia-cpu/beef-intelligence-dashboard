@@ -107,50 +107,83 @@ async function fetchCMEPrices() {
 }
 
 // ============================================================
-// USDA AMS — Cutout & Cash Prices (MARS API)
+// USDA AMS — Cutout & Cash Prices
+// Primary: mpr.datamart.ams.usda.gov  |  Fallback: marsapi.ams.usda.gov
 // ============================================================
 async function fetchUSDAams() {
-  try {
-    const headers = { Accept: 'application/json' };
+  const browserHeaders = {
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Referer': 'https://mpr.datamart.ams.usda.gov/',
+  };
 
+  // --- Primary: mpr.datamart API ---
+  try {
     const [cutoutRes, cashRes] = await Promise.all([
-      axios.get('https://mpr.datamart.ams.usda.gov/services/v1.1/reports/2453/Current%20Cutout%20Values', { headers, timeout: 30000 }),
-      axios.get('https://mpr.datamart.ams.usda.gov/services/v1.1/reports/2477/Detail', { headers, timeout: 60000 }),
+      axios.get('https://mpr.datamart.ams.usda.gov/services/v1.1/reports/2453/Current%20Cutout%20Values', { headers: browserHeaders, timeout: 30000 }),
+      axios.get('https://mpr.datamart.ams.usda.gov/services/v1.1/reports/2477/Detail', { headers: browserHeaders, timeout: 60000 }),
     ]);
 
     const cutoutData = cutoutRes.data?.results || [];
-    const cashData = cashRes.data?.results || [];
+    const cashData   = cashRes.data?.results   || [];
 
-    // Parse latest cutout
     const latest = cutoutData[0] || {};
     const cutout = {
       choicePrice: parseFloat(latest.choice_600_900_current || 0),
       selectPrice: parseFloat(latest.select_600_900_current || 0),
-      reportDate: latest.report_date || '',
+      reportDate:  latest.report_date || '',
+      source: 'USDA AMS MPR',
     };
 
-    // Parse cash — get unique selling_basis + grade combos with prices
     const cashByBasis = {};
     for (const row of cashData) {
       if (!row.weighted_avg_price) continue;
       const key = `${row.selling_basis_description}-${row.class_description}`;
       if (!cashByBasis[key]) {
         cashByBasis[key] = {
-          basis: row.selling_basis_description || '',
-          class: row.class_description || '',
-          grade: row.grade_description || '',
-          price: parseFloat(row.weighted_avg_price),
-          headCount: row.head_count || '',
+          basis:      row.selling_basis_description || '',
+          class:      row.class_description         || '',
+          grade:      row.grade_description         || '',
+          price:      parseFloat(row.weighted_avg_price),
+          headCount:  row.head_count  || '',
           reportDate: row.report_date || '',
         };
       }
     }
     const cash = Object.values(cashByBasis).slice(0, 10);
-
     cache.usda_ams = { cutout, cash, updated: new Date().toISOString() };
-    console.log(`  USDA AMS: choice=$${cutout.choicePrice}, select=$${cutout.selectPrice}, cash=${cash.length} entries`);
+    console.log(`  USDA AMS (primary): choice=$${cutout.choicePrice}, select=$${cutout.selectPrice}, cash=${cash.length} entries`);
+    return;
   } catch (err) {
-    console.error('USDA AMS error:', err.message);
+    console.warn(`  USDA AMS primary API unavailable (${err.message}) — retaining cached data`);
+  }
+
+  // --- Fallback: keep existing cache or try MARS retail proxy ---
+  try {
+    const amsKey = process.env.USDA_AMS_KEY;
+    if (!amsKey) throw new Error('No USDA_AMS_KEY');
+
+    const marsAuth = Buffer.from(`${amsKey}:`).toString('base64');
+    const featureRes = await axios.get(
+      'https://marsapi.ams.usda.gov/services/v1.2/reports/3228',
+      { headers: { 'Authorization': `Basic ${marsAuth}`, 'Accept': 'application/json' }, timeout: 20000 }
+    );
+
+    const rows = featureRes.data?.results || [];
+    const recentRow = rows.sort((a, b) => new Date(b.report_date) - new Date(a.report_date))[0] || {};
+
+    // Keep existing cached cutout prices — just refresh the timestamp
+    const existing = cache.usda_ams?.cutout;
+    if (existing?.choicePrice) {
+      cache.usda_ams = {
+        ...cache.usda_ams,
+        cutout: { ...existing, source: 'USDA AMS (cached)', stale: true },
+      };
+      console.log(`  USDA AMS (fallback): retaining cached choice=$${existing.choicePrice}`);
+    }
+  } catch (fallbackErr) {
+    console.error(`  USDA AMS all sources failed — retaining last cache`);
   }
 }
 
