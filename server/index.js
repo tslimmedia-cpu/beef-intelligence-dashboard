@@ -122,11 +122,12 @@ async function fetchUSDAams() {
   try {
     const [cutoutRes, cashRes] = await Promise.all([
       axios.get('https://mpr.datamart.ams.usda.gov/services/v1.1/reports/2453/Current%20Cutout%20Values', { headers: browserHeaders, timeout: 30000 }),
-      axios.get('https://mpr.datamart.ams.usda.gov/services/v1.1/reports/2477/Detail', { headers: browserHeaders, timeout: 60000 }),
+      axios.get('https://mpr.datamart.ams.usda.gov/services/v1.1/reports/2477/Detail', { headers: browserHeaders, timeout: 60000, maxContentLength: 4 * 1024 * 1024, maxBodyLength: 4 * 1024 * 1024 }),
     ]);
 
     const cutoutData = cutoutRes.data?.results || [];
-    const cashData   = cashRes.data?.results   || [];
+    // Slice early — Detail report can return thousands of rows; we only need ~50 to deduplicate
+    const cashData   = (cashRes.data?.results || []).slice(0, 80);
 
     const latest = cutoutData[0] || {};
     const cutout = {
@@ -669,9 +670,10 @@ async function fetchSECFilings() {
       });
 
       const recent = res.data.filings?.recent || {};
-      const forms = recent.form || [];
-      const dates = recent.filingDate || [];
-      const accnums = recent.accessionNumber || [];
+      // Slice to last 60 filings only — full history can be thousands of entries and wastes memory
+      const forms = (recent.form || []).slice(0, 60);
+      const dates = (recent.filingDate || []).slice(0, 60);
+      const accnums = (recent.accessionNumber || []).slice(0, 60);
       let count = 0;
 
       for (let i = 0; i < forms.length && count < 4; i++) {
@@ -1238,21 +1240,46 @@ app.get('/api/feeds', (req, res) => {
 // Scheduled Updates
 // ============================================================
 
-// Initial fetch on startup — staggered to avoid memory spike
-(async () => {
-  console.log('Initial data fetch...');
-  // Wave 1: critical price data
-  await Promise.all([fetchCMEPrices(), fetchUSDAams(), fetchBeefNews()]);
-  // Wave 2: USDA reports
-  await Promise.all([fetchUSDANass(), fetchUSDAFas()]);
-  // Wave 3: map/geo data (was the memory killer - now safe with point data)
-  await Promise.all([fetchDroughtMonitor(), fetchWildfire(), fetchDiseaseAlerts()]);
-  // Wave 4: investigative data
-  await Promise.all([fetchFederalRegister(), fetchSECFilings(), fetchGovContracts()]);
-  // Final: build intel feed with all data loaded
-  await fetchIntelFeed();
-  console.log('✅ Initial data loaded');
-})();
+// Initial fetch on startup — spread over time so memory never spikes
+// Server binds to PORT immediately; data populates progressively
+console.log('Scheduling startup data fetches...');
+
+// t=0s: CME prices only (smallest fetch)
+fetchCMEPrices().catch(() => {});
+
+// t=8s: USDA AMS + BeefNews
+setTimeout(async () => {
+  await fetchUSDAams().catch(() => {});
+  await fetchBeefNews().catch(() => {});
+  await fetchIntelFeed().catch(() => {});
+  console.log('Wave 1 done (prices + news)');
+}, 8000);
+
+// t=25s: NASS + FAS + drought
+setTimeout(async () => {
+  await fetchUSDANass().catch(() => {});
+  await fetchUSDAFas().catch(() => {});
+  await fetchDroughtMonitor().catch(() => {});
+  await fetchIntelFeed().catch(() => {});
+  console.log('Wave 2 done (USDA reports + drought)');
+}, 25000);
+
+// t=50s: wildfire + disease alerts
+setTimeout(async () => {
+  await fetchWildfire().catch(() => {});
+  await fetchDiseaseAlerts().catch(() => {});
+  await fetchIntelFeed().catch(() => {});
+  console.log('Wave 3 done (wildfire + disease)');
+}, 50000);
+
+// t=80s: investigative data (heaviest - SEC EDGAR)
+setTimeout(async () => {
+  await fetchFederalRegister().catch(() => {});
+  await fetchSECFilings().catch(() => {});
+  await fetchGovContracts().catch(() => {});
+  await fetchIntelFeed().catch(() => {});
+  console.log('✅ All data loaded');
+}, 80000);
 
 // CME: Every 15 minutes
 cron.schedule('*/15 * * * *', () => {
